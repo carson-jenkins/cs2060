@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <string.h>
+#include <stdlib.h>
 
 #define MAX 80
 
@@ -9,34 +10,73 @@ struct Info {
     int age;
 };
 
+typedef struct node {
+    struct Info data;
+    struct node* nextNodePtr;
+} Node;
+
+
 void fgetsRemoveNewLine(char *str);
 int strcmpIgnoreCase(char *s1, char *s2);
-void insertPet(void);
-void displayPets(void);
-void writeToFile(void);
-void removePet(void);
+char validateYesNo(void);
+void insertPet(Node** headPtr, struct Info *info);
+void displayPets(Node* listPtr);
+void writeToFile(Node* listPtr);
+void removePet(Node** headPtr, struct Info *info);
+void removeRemainingPets(Node** headPtr);
 
 int main(int argc, const char * argv[]) {
     // Use a linked list to store the pet information in alphabetical order.
-    char str1[MAX];
-       char str2[MAX];
-       int ret;
+    Node* headNodePtr = NULL;
+    int number = 0;
+    char yesOrNo = ' ';
 
+    displayPets(headNodePtr);
 
-       strcpy(str1, "abcdef");
-       strcpy(str2, "ABCDEF");
+    // add pets to list
+    do {
+        struct Info info = {};
+        
+        puts("Enter name: ");
+        fgetsRemoveNewLine(info.name);
+        
+        puts("Enter age: ");
+        char temp[MAX]; // makes it so fgets can still be used for int
+        fgetsRemoveNewLine(temp);
+        char *ptr; // needed for strtod function
+        info.age = strtod(temp, &ptr);
 
-       ret = strcmpIgnoreCase(str1, str2);
+        insertPet(&headNodePtr, &info);
 
-       if(ret < 0) {
-          printf("str1 is less than str2");
-       } else if(ret > 0) {
-          printf("str2 is less than str1");
-       } else {
-          printf("str1 is equal to str2");
-       }
+        displayPets(headNodePtr);
+        printf("%s", "\nDo you want to add another pet? ");
+        yesOrNo = validateYesNo();
+        
+    } while (yesOrNo == 'y');
+
+    // write pets to a file
+    writeToFile(headNodePtr);
     
-    printf("\n%s  %s\n", str1, str2);
+    // remove pets from list
+    do {
+        struct Info info = {};
+        
+        puts("\nEnter pet in the list to remove:");
+        fgetsRemoveNewLine(info.name);
+
+        removePet(&headNodePtr, &info);
+
+        displayPets(headNodePtr);
+
+        printf("%s", "\nDo you want to remove another pet? ");
+        yesOrNo = validateYesNo();
+
+    } while ((yesOrNo == 'y') && (headNodePtr != NULL));
+
+    displayPets(headNodePtr);
+    removeRemainingPets(&headNodePtr);
+    displayPets(headNodePtr);
+
     return 0;
 }
 
@@ -64,31 +104,132 @@ int strcmpIgnoreCase(char *s1, char *s2){
     return strcmp(temp1, temp2);
 }
 
-// Function to insert pets:
-void insertPet(void){
-    // Program will ask the user to enter the name and age of the pet. Ask if they want to add another  pet (y)es or (n)o until the user enters (n)o.
-    // You do not need to do any validation when the user enters the age. Assume only valid integer values will be entered.
-    // Allocate memory for the pet
-    // Insert the names and ages in the linked list in alphabetical order. You do not need to do anything if a duplicate name is entered.
+char validateYesNo(void) {
+    char validYesNo;
+
+    do {
+        puts("Please enter (y)es or (n)o:");
+        validYesNo = getchar();
+        while (getchar() != '\n');
+
+        validYesNo = tolower(validYesNo);
+
+    } while (validYesNo != 'y' && validYesNo != 'n');
+
+    return  validYesNo;
+}
+
+// function to insert pets
+void insertPet(Node** headPtr, struct Info *info){
+    
+    Node* newNodePtr = malloc(sizeof(Node));
+    if (newNodePtr != NULL) {
+            
+        newNodePtr->data = *info;
+        newNodePtr->nextNodePtr = NULL;
+        Node* previousPtr = NULL;
+        Node* currentPtr = *headPtr;
+        
+        while (currentPtr != NULL && strcmpIgnoreCase(currentPtr->data.name, info->name) <= 0) {
+            previousPtr = currentPtr;
+            currentPtr = currentPtr->nextNodePtr;
+        }
+            
+        if (previousPtr == NULL) {
+            *headPtr = newNodePtr;
+        }
+        else {
+            previousPtr->nextNodePtr = newNodePtr;
+        }
+            
+        newNodePtr->nextNodePtr = currentPtr;
+    }
+    else {
+        printf("No memory to create node for %s\n", info->name);
+    }
 }
 
 // Function to display list of pets
-void displayPets(void){
+void displayPets(Node* listPtr){
     // Display the names and corresponding age
-    // Report if there aren’t any pets in the list
+    if (listPtr != NULL) {
+        puts("The names in alphabetical order: ");
+        Node* currentPtr = listPtr;
+        while (currentPtr != NULL) {
+            // display and go to next node
+            printf("%s is %d years old\n", currentPtr->data.name, currentPtr->data.age);
+            currentPtr = currentPtr->nextNodePtr;
+        }
+    }
+    else {
+        puts("There aren’t any pets in the list");
+    }
 }
 
 // Function to write the names and ages of the pets to a file if there are any pets
-void writeToFile(void){
+void writeToFile(Node* listPtr){
+    FILE *fp;
+    fp = fopen("file.txt", "w");
     
+    if (listPtr != NULL) {
+        puts("\nWriting pets to a file...");
+        Node* currentPtr = listPtr;
+        while (currentPtr != NULL) {
+            // write to file and go to next node
+            fprintf(fp, "%s is %d years old\n", currentPtr->data.name, currentPtr->data.age);
+            currentPtr = currentPtr->nextNodePtr;
+        }
+    }
+    else {
+        puts("There aren’t any pets in the list");
+    }
 }
 
-// Function to remove pet
-void removePet(void){
-    // Ask if they want to remove a pet (y)es or (n)o until the user enters n(o). Repeat this question until they answer no or when there are no more pets in the list.
-    // Ask for the name to be deleted
-    // Report if name not in the list
-    // Delete if matches name in the list (deallocate memory)
-    // If there are no more pets in the list after the deletion display a message and do not ask if they want to remove a pet.
-    // Display pets in the list
+// function to remove pet
+void removePet(Node** headPtr, struct Info *info){
+ 
+    Node* previousPtr = NULL;
+    Node* currentPtr = *headPtr;
+
+    if (*headPtr != NULL) {
+        if (strcmpIgnoreCase((*headPtr)->data.name, info->name) == 0) {
+            *headPtr = (*headPtr)->nextNodePtr;
+            free(currentPtr);
+            currentPtr = NULL;
+        }
+        else {
+            while (currentPtr != NULL && strcmpIgnoreCase(currentPtr->data.name, info->name) != 0) {
+                previousPtr = currentPtr;
+                currentPtr = currentPtr->nextNodePtr;
+            }
+
+            if (currentPtr != NULL) {
+                previousPtr->nextNodePtr = currentPtr->nextNodePtr;
+                free(currentPtr);
+                currentPtr = NULL;
+            }
+            else {
+                puts("Pet to remove not found");
+            }
+        }
+    }
+    else {
+        puts("There aren't any pets in the list");
+    }
+}
+
+void removeRemainingPets(Node** headPtr) {
+    puts("Remove all animals from memory before exiting program");
+    
+    Node* currentPtr = *headPtr;
+    Node* nextNodePtr = NULL;
+
+    while (currentPtr != NULL)
+    {
+        nextNodePtr = currentPtr->nextNodePtr;
+        free(currentPtr);
+        currentPtr = nextNodePtr;
+    }
+
+    *headPtr = NULL;
 }
