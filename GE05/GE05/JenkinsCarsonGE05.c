@@ -28,7 +28,6 @@ void removeRemainingPets(Node** headPtr);
 int main(int argc, const char * argv[]) {
     // Use a linked list to store the pet information in alphabetical order.
     Node* headNodePtr = NULL;
-    int number = 0;
     char yesOrNo = ' ';
 
     displayPets(headNodePtr);
@@ -224,8 +223,7 @@ void removeRemainingPets(Node** headPtr) {
     Node* currentPtr = *headPtr;
     Node* nextNodePtr = NULL;
 
-    while (currentPtr != NULL)
-    {
+    while (currentPtr != NULL) {
         nextNodePtr = currentPtr->nextNodePtr;
         free(currentPtr);
         currentPtr = nextNodePtr;
